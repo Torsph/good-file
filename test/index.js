@@ -409,5 +409,44 @@ describe('GoodFile', function () {
                 }, 150);
             });
         });
+
+        it('prints error events with stack and message', function (done) {
+
+            var file = Hoek.uniqueFilename(internals.tempDir);
+            var reporter = new GoodFile(file, { error: '*' });
+            var ee = new EventEmitter();
+
+            reporter.start(ee, function (error) {
+
+                expect(error).to.not.exist();
+
+                var data = {
+                    id: 1,
+                    timestamp: Date.now(),
+                    error: {
+                        message: 'test message',
+                        stack: 'fake stack for testing'
+                    }
+                };
+
+                ee.emit('report', 'error', data);
+
+                reporter._writeStream.on('finish', function() {
+
+                    internals.getLog(reporter._writeStream.path, function (error, results) {
+
+                        expect(error).to.not.exist();
+                        expect(results[0].data.message).to.equal(data.error.message);
+                        expect(results[0].data.stack).to.equal(data.error.stack);
+
+                        internals.removeLog(reporter._writeStream.path);
+
+                        done();
+                    });
+                });
+
+                reporter.stop();
+            });
+        });
     });
 });
